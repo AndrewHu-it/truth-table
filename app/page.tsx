@@ -1,40 +1,95 @@
-export default function Home() {
-  const markets = [
-    { id: "m1", title: "Did Facility X have a chemical leak in March 2024?", yes: 0.62 },
-    { id: "m2", title: "Did University Y force Professor Chen to resign in Sept 2025?", yes: 0.41 },
-    { id: "m3", title: "Will BTC be above $120k on June 30, 2026?", yes: 0.55 },
-  ];
+"use client";
+
+import { useEffect, useState } from "react";
+
+type Market = {
+  id: string;
+  question: string;
+  b: number;
+  q_yes: number;
+  q_no: number;
+  p_yes: number;
+  created_at: string;
+};
+
+export default function Page() {
+  const [markets, setMarkets] = useState<Market[]>([]);
+  const [question, setQuestion] = useState("");
+  const [b, setB] = useState(25);
+  const [err, setErr] = useState("");
+
+  async function load() {
+    setErr("");
+    const r = await fetch("/api/markets", { cache: "no-store" });
+    const data = await r.json();
+    setMarkets(data.markets ?? []);
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function createMarket() {
+    setErr("");
+    const r = await fetch("/api/markets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, b }),
+    });
+
+    const data = await r.json();
+    if (!r.ok) {
+      setErr(data.error ?? "failed");
+      return;
+    }
+
+    setQuestion("");
+    await load();
+  }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="mx-auto max-w-5xl px-6 py-10">
-        <h1 className="text-3xl font-bold tracking-tight">Truth Market</h1>
-        <p className="mt-2 text-slate-300">
-          Click a market → later we’ll wire this to a real backend + trading API.
-        </p>
+    <div className="container">
+      <h1>Truth Table</h1>
+      <p className="muted">
+        Markets powered by an LMSR AMM. This UI calls the same API bots will use.
+      </p>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          {markets.map((m) => (
-            <div
-              key={m.id}
-              className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 shadow"
-            >
-              <div className="text-sm text-slate-400">Market</div>
-              <div className="mt-1 text-lg font-semibold">{m.title}</div>
-
-              <div className="mt-4 flex items-center justify-between">
-                <div className="text-slate-300">
-                  YES price: <span className="font-mono">{m.yes.toFixed(2)}</span>
-                </div>
-
-                <button className="rounded-xl bg-blue-600 px-4 py-2 font-semibold hover:bg-blue-500">
-                  Trade
-                </button>
-              </div>
-            </div>
-          ))}
+      <div className="card">
+        <h3>Create a market</h3>
+        <div className="row">
+          <div style={{ flex: 1 }}>
+            <input
+              className="input"
+              placeholder="Question..."
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+            />
+          </div>
+          <div style={{ width: 140 }}>
+            <input
+              className="input"
+              type="number"
+              value={b}
+              onChange={(e) => setB(Number(e.target.value))}
+              title="Liquidity parameter b"
+            />
+          </div>
+          <button className="btn" onClick={createMarket}>Create</button>
         </div>
+        {err ? <p style={{ color: "salmon" }}>{err}</p> : null}
       </div>
-    </main>
+
+      {markets.map((m) => (
+        <div className="card" key={m.id}>
+          <div className="row" style={{ justifyContent: "space-between" }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 650 }}>{m.question}</div>
+              <div className="muted">b={m.b} • YES price: {m.p_yes.toFixed(3)}</div>
+            </div>
+            <a className="btn" href={`/m/${m.id}`}>Open</a>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }

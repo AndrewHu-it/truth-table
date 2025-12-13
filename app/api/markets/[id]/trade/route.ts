@@ -1,0 +1,119 @@
+import { pool } from "@/lib/db";
+
+// LMSR cost function:
+// C(qYes, qNo) = b * ln(exp(qYes/b) + exp(qNo/b))
+function lmsrCost(qYes: number, qNo: number, b: number) {
+  return b * Math.log(Math.exp(qYes / b) + Math.exp(qNo / b));
+}
+
+function yesPrice(qYes: number, qNo: number, b: number) {
+  const eY = Math.exp(qYes / b);
+  const eN = Math.exp(qNo / b);
+  return eY / (eY + eN);
+}
+
+export async function POST(
+    req: Request,
+    ctx: { params: Promise<{ id: string }> } // ⚠️ CHANGED
+  ) {
+    const { id: marketId } = await ctx.params; // ⚠️ CHANGED
+    // ... rest of your code stays the same
+  
+  
+
+  const body = await req.json().catch(() => ({}));
+  const side = String(body.side ?? "").toUpperCase();
+  const shares = Number(body.shares ?? 0);
+
+  // ⚠️ CHANGED: placeholder identity. Later you’ll replace this with real auth / API keys.
+  const who = String(body.who ?? "demo");
+
+  // Basic validation
+  if (side !== "YES" && side !== "NO") {
+    return Response.json({ error: "side must be YES or NO" }, { status: 400 });
+  }
+  if (!Number.isFinite(shares) || shares <= 0) {
+    return Response.json({ error: "shares must be > 0" }, { status: 400 });
+  }
+
+  // We need a dedicated client so we can run BEGIN/COMMIT on one connection.
+  const client = await pool.connect();
+
+  try {
+    // 1) BEGIN transaction
+    await client.query("BEGIN");
+
+    // 2) Lock the market row so concurrent trades queue up safely.
+    // ⚠️ CHANGED: FOR UPDATE is the key line that prevents races.
+    const mRes = await client.query(
+      `SELECT id, b, q_yes, q_no
+       FROM markets
+       WHERE id = $1
+       FOR UPDATE`,
+      [marketId]
+    );
+
+    if (mRes.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return Response.json({ error: "market not found" }, { status: 404 });
+    }
+
+    const m = mRes.rows[0];
+    const b = Number(m.b);
+    const qYesOld = Number(m.q_yes);
+    const qNoOld = Number(m.q_no);
+
+    // 3) Compute cost based on LMSR cost function difference
+    const oldC = lmsrCost(qYesOld, qNoOld, b);
+
+    const qYesNew = side === "YES" ? qYesOld + shares : qYesOld;
+    const qNoNew  = side === "NO"  ? qNoOld + shares  : qNoOld;
+
+    const newC = lmsrCost(qYesNew, qNoNew, b);
+    const cost = newC - oldC;
+
+    // 4) Insert immutable trade record
+    const tRes = await client.query(
+      `INSERT INTO trades (market_id, who, side, shares, cost)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, created_at`,
+      [marketId, who, side, shares, cost]
+    );
+
+    // 5) Update market state snapshot
+    await client.query(
+      `UPDATE markets
+       SET q_yes = $2, q_no = $3
+       WHERE id = $1`,
+      [marketId, qYesNew, qNoNew]
+    );
+
+    // 6) COMMIT transaction
+    await client.query("COMMIT");
+
+    // Return useful info to the UI/bots
+    return Response.json({
+      trade: {
+        id: tRes.rows[0].id,
+        created_at: tRes.rows[0].created_at,
+        who,
+        side,
+        shares,
+        cost,
+      },
+      market: {
+        id: marketId,
+        b,
+        q_yes: qYesNew,
+        q_no: qNoNew,
+        p_yes: yesPrice(qYesNew, qNoNew, b),
+      },
+    });
+  } catch (e: any) {
+    // If anything fails, undo the whole transaction
+    await client.query("ROLLBACK");
+    return Response.json({ error: e?.message ?? "trade failed" }, { status: 500 });
+  } finally {
+    client.release();
+  }
+}
