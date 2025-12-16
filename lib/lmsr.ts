@@ -4,6 +4,7 @@ export const B_MIN = 0.01;
 export const B_MAX = 1e6;
 export const SHARES_MAX = 1e6;
 export const Q_MAX = 1e6;
+export const B_STATIC = 25; // fixed liquidity parameter for all markets
 
 function logSumExp(a: number, b: number) {
   const m = Math.max(a, b);

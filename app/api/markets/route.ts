@@ -1,5 +1,5 @@
 import { pool } from "@/lib/db";
-import { B_MAX, B_MIN, yesPrice } from "@/lib/lmsr";
+import { B_STATIC, yesPrice } from "@/lib/lmsr";
 
 export async function GET() {
   const r = await pool.query(
@@ -19,16 +19,12 @@ export async function GET() {
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const question = String(body.question ?? "").trim();
-  const b = Number(body.b ?? 25);
 
   if (!question) {
     return Response.json({ error: "question required" }, { status: 400 });
   }
-  if (question.length > 280) {
+  if (question.length > 120) {
     return Response.json({ error: "question too long" }, { status: 400 });
-  }
-  if (!Number.isFinite(b) || b < B_MIN || b > B_MAX) {
-    return Response.json({ error: `b must be between ${B_MIN} and ${B_MAX}` }, { status: 400 });
   }
 
   // ⚠️ CHANGED: do market insert + initial snapshot in one transaction
@@ -40,7 +36,7 @@ export async function POST(req: Request) {
       `INSERT INTO markets (question, b)
        VALUES ($1, $2)
        RETURNING id, question, b, q_yes, q_no, created_at`,
-      [question, b]
+      [question, B_STATIC]
     );
 
     const m = r.rows[0];

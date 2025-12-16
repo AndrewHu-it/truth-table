@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { B_MAX, B_MIN } from "@/lib/lmsr";
 
 type Market = {
   id: string;
@@ -16,7 +15,6 @@ type Market = {
 export default function Page() {
   const [markets, setMarkets] = useState<Market[]>([]);
   const [question, setQuestion] = useState("");
-  const [b, setB] = useState(25);
   const [err, setErr] = useState("");
 
   async function load() {
@@ -35,7 +33,7 @@ export default function Page() {
     const r = await fetch("/api/markets", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, b }),
+      body: JSON.stringify({ question }),
     });
 
     const data = await r.json();
@@ -64,17 +62,6 @@ export default function Page() {
               placeholder="Question..."
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
-            />
-          </div>
-          <div style={{ width: 140 }}>
-            <input
-              className="input"
-              type="number"
-              value={b}
-              onChange={(e) => setB(Number(e.target.value))}
-              title="Liquidity parameter b"
-              min={B_MIN}
-              max={B_MAX}
             />
           </div>
           <button className="btn" onClick={createMarket}>Create</button>
