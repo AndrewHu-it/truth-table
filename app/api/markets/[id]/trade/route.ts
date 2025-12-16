@@ -1,14 +1,5 @@
 import { pool } from "@/lib/db";
-
-function lmsrCost(qYes: number, qNo: number, b: number) {
-  return b * Math.log(Math.exp(qYes / b) + Math.exp(qNo / b));
-}
-
-function yesPrice(qYes: number, qNo: number, b: number) {
-  const eY = Math.exp(qYes / b);
-  const eN = Math.exp(qNo / b);
-  return eY / (eY + eN);
-}
+import { B_MAX, B_MIN, Q_MAX, SHARES_MAX, lmsrCost, yesPrice } from "@/lib/lmsr";
 
 export async function POST(
   req: Request,
@@ -24,8 +15,8 @@ export async function POST(
   if (side !== "YES" && side !== "NO") {
     return Response.json({ error: "side must be YES or NO" }, { status: 400 });
   }
-  if (!Number.isFinite(shares) || shares <= 0) {
-    return Response.json({ error: "shares must be > 0" }, { status: 400 });
+  if (!Number.isFinite(shares) || shares <= 0 || shares > SHARES_MAX) {
+    return Response.json({ error: `shares must be > 0 and <= ${SHARES_MAX}` }, { status: 400 });
   }
 
   const client = await pool.connect();
@@ -48,6 +39,10 @@ export async function POST(
 
     const m = mRes.rows[0];
     const b = Number(m.b);
+    if (!Number.isFinite(b) || b < B_MIN || b > B_MAX) {
+      await client.query("ROLLBACK");
+      return Response.json({ error: "market has invalid liquidity parameter" }, { status: 400 });
+    }
     const qYesOld = Number(m.q_yes);
     const qNoOld = Number(m.q_no);
 
@@ -55,6 +50,11 @@ export async function POST(
 
     const qYesNew = side === "YES" ? qYesOld + shares : qYesOld;
     const qNoNew  = side === "NO"  ? qNoOld + shares  : qNoOld;
+
+    if (Math.abs(qYesNew) > Q_MAX || Math.abs(qNoNew) > Q_MAX) {
+      await client.query("ROLLBACK");
+      return Response.json({ error: "position size too large" }, { status: 400 });
+    }
 
     const newC = lmsrCost(qYesNew, qNoNew, b);
     const cost = newC - oldC;

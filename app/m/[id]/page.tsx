@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react"; // ⚠️ CHANGED: `use` unwraps params Promise
+import { SHARES_MAX } from "@/lib/lmsr";
 
 type Market = {
   id: string;
@@ -107,7 +108,7 @@ export default function MarketPage({ params }: { params: Promise<{ id: string }>
 
   useEffect(() => {
     loadAll();
-    const timer = setInterval(loadAll, 1200);
+    const timer = setInterval(loadAll, 5000);
     return () => clearInterval(timer);
   }, [id]);
 
@@ -154,6 +155,8 @@ export default function MarketPage({ params }: { params: Promise<{ id: string }>
               type="number"
               value={shares}
               onChange={(e) => setShares(Number(e.target.value))}
+              min={0.0001}
+              max={SHARES_MAX}
             />
             <div className="muted">shares</div>
           </div>
@@ -188,7 +191,7 @@ export default function MarketPage({ params }: { params: Promise<{ id: string }>
             <div>
               <b>{t.side}</b> {t.shares} shares <span className="muted">by {t.who}</span>
             </div>
-            <div className="muted">cost: {t.cost.toFixed(4)}</div>
+            <div className="muted">cost: {Number(t.cost).toFixed(4)}</div>
           </div>
         ))}
       </div>

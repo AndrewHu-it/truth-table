@@ -1,10 +1,5 @@
 import { pool } from "@/lib/db";
-
-function yesPrice(qYes: number, qNo: number, b: number) {
-  const eY = Math.exp(qYes / b);
-  const eN = Math.exp(qNo / b);
-  return eY / (eY + eN);
-}
+import { yesPrice } from "@/lib/lmsr";
 
 export async function GET(
   _req: Request,

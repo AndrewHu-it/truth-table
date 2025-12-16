@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { B_MAX, B_MIN } from "@/lib/lmsr";
 
 type Market = {
   id: string;
@@ -72,6 +73,8 @@ export default function Page() {
               value={b}
               onChange={(e) => setB(Number(e.target.value))}
               title="Liquidity parameter b"
+              min={B_MIN}
+              max={B_MAX}
             />
           </div>
           <button className="btn" onClick={createMarket}>Create</button>
