@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { pool } from "@/lib/db";
 
 export async function GET() {
-  const { userId } = auth();
+  const { userId } = await auth();
   if (!userId) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }
