@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
 
 export default function TopNav() {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { isSignedIn } = useUser();
+  const [cash, setCash] = useState(0);
+  const [portfolio, setPortfolio] = useState(0);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -18,6 +21,37 @@ export default function TopNav() {
     return () => document.removeEventListener("click", onClick);
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      if (!isSignedIn) {
+        setCash(0);
+        setPortfolio(0);
+        return;
+      }
+      try {
+        const r = await fetch("/api/portfolio", { cache: "no-store" });
+        const text = await r.text();
+        const data = text ? JSON.parse(text) : {};
+        if (!cancelled && r.ok) {
+          setCash(Number(data.balance ?? 0));
+          setPortfolio(Number(data.portfolio_value ?? 0));
+        }
+      } catch {
+        if (!cancelled) {
+          setCash(0);
+          setPortfolio(0);
+        }
+      }
+    }
+    load();
+    const id = setInterval(load, 8000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [isSignedIn]);
+
   return (
     <header className="topnav">
       <div className="brand">
@@ -26,20 +60,17 @@ export default function TopNav() {
       <div className="nav-actions">
         <Link href="/" className="nav-link">Markets</Link>
         <Link href="/profile" className="nav-link">Portfolio</Link>
+        <SignedIn>
+          <div className="balance-group">
+            <div className="pill">Portfolio: {portfolio.toFixed(3)} TC</div>
+            <div className="pill">Cash: {cash.toFixed(3)} TC</div>
+          </div>
+        </SignedIn>
         <SignedOut>
           <SignInButton />
           <SignUpButton />
         </SignedOut>
         <SignedIn>
-          <div className="profile-menu" ref={menuRef}>
-            <button className="btn" onClick={() => setOpen((v) => !v)}>Profile ▾</button>
-            {open ? (
-              <div className="profile-menu__items">
-                <Link href="/profile">Portfolio</Link>
-                <Link href="/profile#positions">Positions</Link>
-              </div>
-            ) : null}
-          </div>
           <UserButton />
         </SignedIn>
       </div>

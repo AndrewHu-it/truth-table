@@ -133,6 +133,8 @@ export async function GET(req: Request) {
     return { ...p, value, pnl, pct };
   });
 
+  const portfolioValue = positions.reduce((sum, p) => sum + p.value, 0);
+
   // PnL over time (step series using current prices)
   const points: { t: string; pnl: number }[] = [];
   const tradesAsc = [...trades].reverse();
@@ -176,6 +178,7 @@ export async function GET(req: Request) {
     return Response.json({
       range,
       balance,
+      portfolio_value: portfolioValue,
       trades,
       positions,
       pnl: {

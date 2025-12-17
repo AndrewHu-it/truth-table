@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react"; // ⚠️ CHANGED: `use` unwraps params Promise
+import { SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
 import { SHARES_MAX } from "@/lib/lmsr";
 
 type Market = {
@@ -153,20 +154,26 @@ export default function MarketPage({ params }: { params: Promise<{ id: string }>
         ) : null}
 
         <div className="row" style={{ marginTop: 12 }}>
-          <div style={{ width: 160 }}>
-            <input
-              className="input"
-              type="number"
-              value={shares}
-              onChange={(e) => setShares(Number(e.target.value))}
-              min={0.0001}
-              max={SHARES_MAX}
-            />
-            <div className="muted">shares</div>
-          </div>
+          <SignedIn>
+            <div style={{ width: 160 }}>
+              <input
+                className="input"
+                type="number"
+                value={shares}
+                onChange={(e) => setShares(Number(e.target.value))}
+                min={0.0001}
+                max={SHARES_MAX}
+              />
+              <div className="muted">shares</div>
+            </div>
 
-          <button className="btn" onClick={() => trade("YES")}>Buy YES</button>
-          <button className="btn" onClick={() => trade("NO")}>Buy NO</button>
+            <button className="btn" onClick={() => trade("YES")}>Buy YES</button>
+            <button className="btn" onClick={() => trade("NO")}>Buy NO</button>
+          </SignedIn>
+          <SignedOut>
+            <div className="muted">Sign in to trade</div>
+            <SignInButton />
+          </SignedOut>
         </div>
 
         {err ? <p style={{ color: "salmon" }}>{err}</p> : null}

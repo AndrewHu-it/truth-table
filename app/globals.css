@@ -91,6 +91,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .nav-link {
@@ -134,4 +135,17 @@ body {
 
 .profile-menu__items a:hover {
   background: rgba(120, 160, 255, 0.12);
+}
+.balance-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.pill {
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(120,160,255,0.25);
+  font-size: 0.95rem;
 }

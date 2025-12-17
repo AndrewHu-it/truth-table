@@ -45,6 +45,15 @@ export async function POST(
       );
     }
 
+    // check available balance
+    const balRes = await client.query(
+      `SELECT COALESCE(SUM(delta), 0) AS balance
+       FROM ledger
+       WHERE user_id = $1`,
+      [userId]
+    );
+    const balance = Number(balRes.rows[0].balance);
+
     // ⚠️ CHANGED: lock the row so concurrent trades don't race
     const mRes = await client.query(
       `SELECT id, b, q_yes, q_no
@@ -79,7 +88,13 @@ export async function POST(
     }
 
     const newC = lmsrCost(qYesNew, qNoNew, b);
-    const cost = newC - oldC;
+    const rawCost = newC - oldC;
+    const cost = Math.max(rawCost, 0); // guard tiny negative due to floating error
+
+    if (cost > balance + 1e-9) {
+      await client.query("ROLLBACK");
+      return Response.json({ error: "insufficient balance" }, { status: 400 });
+    }
 
     const pYesNew = yesPrice(qYesNew, qNoNew, b); // ⚠️ CHANGED: compute once, use for snapshot + response
 
@@ -104,6 +119,13 @@ export async function POST(
       `INSERT INTO market_snapshots (market_id, q_yes, q_no, p_yes)
        VALUES ($1, $2, $3, $4)`,
       [marketId, qYesNew, qNoNew, pYesNew]
+    );
+
+    // deduct cost from cash balance
+    await client.query(
+      `INSERT INTO ledger (user_id, delta, reason)
+       VALUES ($1, $2, $3)`,
+      [userId, -cost, "trade_cost"]
     );
 
     await client.query("COMMIT");

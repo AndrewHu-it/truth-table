@@ -72,6 +72,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const [balance, setBalance] = useState(0);
+  const [portfolioValue, setPortfolioValue] = useState(0);
   const [pnlTotal, setPnlTotal] = useState(0);
   const [points, setPoints] = useState<PnlPoint[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
@@ -95,6 +96,7 @@ export default function ProfilePage() {
       setBalance(Number(data.balance ?? 0));
       setPnlTotal(Number(data.pnl?.total ?? 0));
       setPoints(data.pnl?.points ?? []);
+      setPortfolioValue(Number(data.portfolio_value ?? 0));
       setPositions(data.positions ?? []);
       setTrades(data.trades ?? []);
     } catch (e: any) {
@@ -149,9 +151,11 @@ export default function ProfilePage() {
         </div>
 
         <div className="card" style={{ flex: 1 }}>
-          <div className="muted">Portfolio balance</div>
+          <div className="muted">Cash</div>
           <div style={{ fontSize: "1.6rem", fontWeight: 650 }}>{balance.toFixed(3)} TC</div>
-          <p className="muted" style={{ marginTop: 8 }}>Truth Coins available in your account.</p>
+          <div className="muted" style={{ marginTop: 8 }}>Available Truth Coins.</div>
+          <div className="muted" style={{ marginTop: 12 }}>Holdings value: {portfolioValue.toFixed(3)} TC</div>
+          <div className="muted" style={{ marginTop: 4 }}>Total: {(balance + portfolioValue).toFixed(3)} TC</div>
         </div>
       </div>
 
