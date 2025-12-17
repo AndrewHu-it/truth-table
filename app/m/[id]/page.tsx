@@ -123,12 +123,16 @@ export default function MarketPage({ params }: { params: Promise<{ id: string }>
     const r = await fetch(`/api/markets/${id}/trade`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ side, shares, who: "demo" }),
+      body: JSON.stringify({ side, shares }),
     });
 
     const data = await r.json();
     if (!r.ok) {
-      setErr(data.error ?? "trade failed");
+      if (r.status === 401) {
+        setErr("Please sign in to trade.");
+      } else {
+        setErr(data.error ?? "trade failed");
+      }
       return;
     }
 

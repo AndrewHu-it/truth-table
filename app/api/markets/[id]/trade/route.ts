@@ -1,3 +1,4 @@
+import { auth } from "@clerk/nextjs/server";
 import { pool } from "@/lib/db";
 import { B_MAX, B_MIN, Q_MAX, SHARES_MAX, lmsrCost, yesPrice } from "@/lib/lmsr";
 
@@ -5,12 +6,17 @@ export async function POST(
   req: Request,
   ctx: { params: Promise<{ id: string }> } // Next 15+: params is a Promise
 ) {
+  const { userId } = await auth();
+  if (!userId) {
+    return Response.json({ error: "unauthorized" }, { status: 401 });
+  }
+
   const { id: marketId } = await ctx.params; // ⚠️ CHANGED: unwrap params
 
   const body = await req.json().catch(() => ({}));
   const side = String(body.side ?? "").toUpperCase();
   const shares = Number(body.shares ?? 0);
-  const who = String(body.who ?? "demo");
+  const who = userId;
 
   if (side !== "YES" && side !== "NO") {
     return Response.json({ error: "side must be YES or NO" }, { status: 400 });
@@ -22,6 +28,22 @@ export async function POST(
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+
+    // ensure profile exists and grant signup bonus if first time
+    const created = await client.query(
+      `INSERT INTO profiles (user_id)
+       VALUES ($1)
+       ON CONFLICT (user_id) DO NOTHING
+       RETURNING user_id`,
+      [userId]
+    );
+    if (created.rowCount === 1) {
+      await client.query(
+        `INSERT INTO ledger (user_id, delta, reason)
+         VALUES ($1, $2, $3)`,
+        [userId, 100, "signup_bonus"]
+      );
+    }
 
     // ⚠️ CHANGED: lock the row so concurrent trades don't race
     const mRes = await client.query(
