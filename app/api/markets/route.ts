@@ -3,7 +3,7 @@ import { B_STATIC, yesPrice } from "@/lib/lmsr";
 
 export async function GET() {
   const r = await pool.query(
-    `SELECT id, question, b, q_yes, q_no, created_at
+    `SELECT id, question, b, q_yes, q_no, created_at, image
      FROM markets
      ORDER BY created_at DESC`
   );
@@ -19,12 +19,16 @@ export async function GET() {
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const question = String(body.question ?? "").trim();
+  const image = String(body.image ?? "").trim();
 
   if (!question) {
     return Response.json({ error: "question required" }, { status: 400 });
   }
   if (question.length > 120) {
     return Response.json({ error: "question too long" }, { status: 400 });
+  }
+  if (image && image.length > 500) {
+    return Response.json({ error: "image URL too long" }, { status: 400 });
   }
 
   // ⚠️ CHANGED: do market insert + initial snapshot in one transaction
@@ -33,10 +37,10 @@ export async function POST(req: Request) {
     await client.query("BEGIN");
 
     const r = await client.query(
-      `INSERT INTO markets (question, b)
-       VALUES ($1, $2)
-       RETURNING id, question, b, q_yes, q_no, created_at`,
-      [question, B_STATIC]
+      `INSERT INTO markets (question, b, image)
+       VALUES ($1, $2, $3)
+       RETURNING id, question, b, q_yes, q_no, created_at, image`,
+      [question, B_STATIC, image || null]
     );
 
     const m = r.rows[0];

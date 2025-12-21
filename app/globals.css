@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6f9ff;
+  --foreground: #0f1a2f;
 }
 
 @theme inline {
@@ -12,17 +12,14 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+  background: radial-gradient(circle at 20% 20%, rgba(120, 160, 255, 0.15), transparent 28%),
+              radial-gradient(circle at 80% 0%, rgba(255, 200, 140, 0.18), transparent 30%),
+              #f6f9ff;
 }
 
 /* ⚠️ CHANGED: simple reusable styles */
@@ -34,30 +31,32 @@ body {
 
 .card {
   border: 1px solid rgba(80, 140, 255, 0.25);
-  background: rgba(40, 80, 180, 0.08);
-  border-radius: 14px;
+  background: #ffffff;
+  border-radius: 18px;
   padding: 16px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+  box-shadow: 0 14px 45px rgba(32, 70, 150, 0.06);
 }
 
 .btn {
-  border: 1px solid rgba(80, 140, 255, 0.45);
-  background: rgba(80, 140, 255, 0.20);
+  border: 1px solid rgba(80, 140, 255, 0.35);
+  background: rgba(80, 140, 255, 0.18);
   padding: 10px 14px;
   border-radius: 12px;
   cursor: pointer;
+  color: inherit;
 }
 
 .btn:hover {
-  background: rgba(80, 140, 255, 0.32);
+  background: rgba(80, 140, 255, 0.3);
 }
 
 .input {
   width: 100%;
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(120, 160, 255, 0.25);
-  background: rgba(20, 30, 55, 0.4);
+  border: 1px solid rgba(120, 160, 255, 0.35);
+  background: #f9fbff;
   color: inherit;
 }
 
@@ -70,6 +69,152 @@ body {
 .muted {
   opacity: 0.75;
   font-size: 0.95rem;
+}
+
+.topnav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 18px;
+  border-bottom: 1px solid rgba(15, 26, 47, 0.06);
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+}
+
+.brand a {
+  font-weight: 700;
+  color: inherit;
+  text-decoration: none;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.nav-link {
+  text-decoration: none;
+  color: inherit;
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
+.nav-link:hover {
+  background: rgba(15, 26, 47, 0.08);
+}
+
+.profile-menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.profile-menu__items {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(120, 160, 255, 0.25);
+  border-radius: 12px;
+  min-width: 160px;
+  box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-menu__items a {
+  color: inherit;
+  text-decoration: none;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+
+.profile-menu__items a:hover {
+  background: rgba(120, 160, 255, 0.12);
+}
+
+.balance-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.pill {
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(15, 26, 47, 0.08);
+  border: 1px solid rgba(120,160,255,0.25);
+  font-size: 0.95rem;
+}
+
+.hero {
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.market-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.market-card {
+  background: #fff;
+  border: 1px solid rgba(80, 140, 255, 0.18);
+  border-radius: 18px;
+  padding: 12px;
+  box-shadow: 0 16px 42px rgba(35, 70, 150, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.market-image {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  background-size: cover;
+  background-position: center;
+  background-color: #eef2ff;
+}
+
+.market-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.cta-yes,
+.cta-no {
+  flex: 1;
+  text-align: center;
+  padding: 12px;
+  border-radius: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  color: #0f1a2f;
+  border: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+}
+
+.cta-yes {
+  background: linear-gradient(120deg, #d7f7e1, #bdf2cc);
+}
+
+.cta-no {
+  background: linear-gradient(120deg, #ffe2e2, #ffc9c9);
+}
+
+.meta-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.95rem;
+  color: rgba(15, 26, 47, 0.7);
 }
 
 .topnav {

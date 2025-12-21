@@ -10,11 +10,13 @@ type Market = {
   q_no: number;
   p_yes: number;
   created_at: string;
+  image?: string | null;
 };
 
 export default function Page() {
   const [markets, setMarkets] = useState<Market[]>([]);
   const [question, setQuestion] = useState("");
+  const [image, setImage] = useState("");
   const [err, setErr] = useState("");
 
   async function load() {
@@ -33,7 +35,7 @@ export default function Page() {
     const r = await fetch("/api/markets", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ question, image }),
     });
 
     const data = await r.json();
@@ -48,10 +50,12 @@ export default function Page() {
 
   return (
     <div className="container">
-      <h1>Truth Table</h1>
-      <p className="muted">
-        Markets powered by an LMSR AMM. This UI calls the same API bots will use.
-      </p>
+      <div className="hero">
+        <h1 style={{ marginBottom: 6 }}>Truth Table</h1>
+        <p className="muted" style={{ margin: 0 }}>
+          Browse markets, tap YES or NO to jump in. Prices update live.
+        </p>
+      </div>
 
       <div className="card">
         <h3>Create a market</h3>
@@ -64,22 +68,42 @@ export default function Page() {
               onChange={(e) => setQuestion(e.target.value)}
             />
           </div>
+          <div style={{ flex: 1 }}>
+            <input
+              className="input"
+              placeholder="Image URL (optional)"
+              value={image}
+              onChange={(e) => setImage(e.target.value)}
+            />
+          </div>
           <button className="btn" onClick={createMarket}>Create</button>
         </div>
         {err ? <p style={{ color: "salmon" }}>{err}</p> : null}
       </div>
 
-      {markets.map((m) => (
-        <div className="card" key={m.id}>
-          <div className="row" style={{ justifyContent: "space-between" }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 650 }}>{m.question}</div>
-              <div className="muted">b={m.b} • YES price: {m.p_yes.toFixed(3)}</div>
+      <div className="market-grid">
+        {markets.map((m) => {
+          const imageUrl = m.image || "/globe.svg"; // replace with your own image URL per market
+          return (
+            <div className="market-card" key={m.id}>
+              <div
+                className="market-image"
+                style={{ backgroundImage: `url(${imageUrl})` }}
+                title="Add an image URL per market to replace this placeholder"
+              />
+              <div style={{ fontWeight: 700, fontSize: "1.05rem" }}>{m.question}</div>
+              <div className="meta-line">
+                <span>Liquidity b={m.b}</span>
+                <span>YES: {m.p_yes.toFixed(3)}</span>
+              </div>
+              <div className="market-actions">
+                <a className="cta-yes" href={`/m/${m.id}`}>YES</a>
+                <a className="cta-no" href={`/m/${m.id}`}>NO</a>
+              </div>
             </div>
-            <a className="btn" href={`/m/${m.id}`}>Open</a>
-          </div>
-        </div>
-      ))}
+          );
+        })}
+      </div>
     </div>
   );
 }

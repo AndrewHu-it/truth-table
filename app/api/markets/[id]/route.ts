@@ -8,7 +8,7 @@ export async function GET(
   const { id } = await ctx.params; // ⚠️ CHANGED: unwrap params with await
 
   const r = await pool.query(
-    `SELECT id, question, b, q_yes, q_no, created_at
+    `SELECT id, question, b, q_yes, q_no, created_at, image
      FROM markets
      WHERE id = $1`,
     [id]
