@@ -58,6 +58,7 @@ export default function Page() {
   return (
     <div className="container">
       <div className="card">
+        <h2 style={{ marginTop: 0, marginBottom: 10, fontSize: "1.6rem", fontWeight: 780 }}>Create a market</h2>
         <SignedIn>
           <div className="row">
             <div style={{ flex: 1 }}>

@@ -124,8 +124,12 @@ export default function MarketPage({ params }: { params: Promise<{ id: string }>
         cost: Number(t.cost ?? 0),
       }));
       setTrades(clean);
-      const yesHeld = clean.filter((t: any) => t.side === "YES").reduce((sum, t) => sum + t.shares, 0);
-      const noHeld  = clean.filter((t: any) => t.side === "NO").reduce((sum, t) => sum + t.shares, 0);
+      const yesHeld = clean
+        .filter((t: any) => t.side === "YES")
+        .reduce((sum: number, t: Trade) => sum + t.shares, 0);
+      const noHeld  = clean
+        .filter((t: any) => t.side === "NO")
+        .reduce((sum: number, t: Trade) => sum + t.shares, 0);
       setHoldings({ yes: yesHeld, no: noHeld });
     }
 
