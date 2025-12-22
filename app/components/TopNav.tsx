@@ -78,13 +78,10 @@ export default function TopNav() {
         </form>
       </div>
       <div className="nav-actions">
-        <Link href="/" className="nav-link">Markets</Link>
-        <Link href="/profile" className="nav-link">Portfolio</Link>
+        <Link href="/" className="nav-link nav-link-strong">Markets</Link>
+        <Link href="/profile" className="nav-link nav-link-strong">Portfolio</Link>
         <SignedIn>
-          <div className="balance-group">
-            <div className="pill">Portfolio: {portfolio.toFixed(3)} TC</div>
-            <div className="pill">Cash: {cash.toFixed(3)} TC</div>
-          </div>
+          <div className="pill pill-strong">Balance: {(portfolio + cash).toFixed(3)} TC</div>
         </SignedIn>
         <SignedOut>
           <SignInButton />

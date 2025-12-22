@@ -28,8 +28,8 @@ type Trade = {
 type Point = { t: string; p_yes: number }; // ⚠️ CHANGED: history points for graph
 
 function PriceGraph({ points }: { points: { p_yes: number; t: string }[] }) {
-  const W = 720;
-  const H = 240;
+  const W = 780;
+  const H = 260;
   const pad = 20;
 
   if (!points || points.length < 2) {
@@ -91,6 +91,7 @@ export default function MarketPage({ params }: { params: Promise<{ id: string }>
   const [shares, setShares] = useState(5);
   const [err, setErr] = useState("");
   const [range, setRange] = useState<"ALL" | "1H" | "6H" | "1D" | "1W" | "1M">("ALL");
+  const [others, setOthers] = useState<Market[]>([]);
 
   async function loadAll() {
     setErr("");
@@ -102,6 +103,14 @@ export default function MarketPage({ params }: { params: Promise<{ id: string }>
       return;
     }
     setMarket(mData.market);
+    // load other markets to suggest
+    fetch("/api/markets", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        const list = (d.markets ?? []).filter((m: Market) => m.id !== id).slice(0, 4);
+        setOthers(list);
+      })
+      .catch(() => {});
 
     const tRes = await fetch(`/api/markets/${id}/trades`, { cache: "no-store" });
     if (tRes.ok) {
@@ -162,17 +171,15 @@ export default function MarketPage({ params }: { params: Promise<{ id: string }>
 
   return (
     <div className="container market-layout">
-      <a className="muted" href="/">← Back</a>
-
       <div className="market-grid-main">
         <div className="card fancy-card market-main">
           <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-            <div className="row" style={{ alignItems: "center", gap: 12 }}>
+            <div className="row" style={{ alignItems: "center", gap: 14 }}>
               {market?.image ? (
                 <div
                   style={{
-                    width: 48,
-                    height: 48,
+                    width: 56,
+                    height: 56,
                     borderRadius: 12,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
@@ -182,11 +189,11 @@ export default function MarketPage({ params }: { params: Promise<{ id: string }>
                 />
               ) : null}
               <div>
-                <div style={{ fontSize: "1.6rem", fontWeight: 780 }}>{market ? market.question : "Loading..."}</div>
+                <div style={{ fontSize: "1.8rem", fontWeight: 780, lineHeight: 1.2 }}>{market ? market.question : "Loading..."}</div>
                 <div className="muted">Volume: {(market?.volume ?? 0).toFixed(3)} TC</div>
               </div>
             </div>
-            <div style={{ fontSize: "1.4rem", fontWeight: 750 }}>{priceDisplay}</div>
+            <div style={{ fontSize: "1.6rem", fontWeight: 780 }}>{priceDisplay}</div>
           </div>
 
           <div className="graph-box">
@@ -205,12 +212,12 @@ export default function MarketPage({ params }: { params: Promise<{ id: string }>
           </div>
         </div>
 
-        <div className="card trade-box">
+        <div className="card trade-box" style={{ padding: 16 }}>
           <h3 style={{ marginTop: 0, marginBottom: 6, fontSize: "1.1rem", fontWeight: 750 }}>Place Order</h3>
-          <div style={{ marginBottom: 10, fontSize: "1.2rem", fontWeight: 700 }}>{priceDisplay}</div>
+          <div style={{ marginBottom: 12, fontSize: "1.3rem", fontWeight: 750 }}>{priceDisplay}</div>
           <SignedIn>
             <div className="trade-input">
-              <label className="muted" htmlFor="shares">Shares</label>
+              <label className="muted" htmlFor="shares" style={{ fontSize: "0.95rem" }}>Shares</label>
               <input
                 id="shares"
                 className="input"
@@ -221,20 +228,50 @@ export default function MarketPage({ params }: { params: Promise<{ id: string }>
                 max={SHARES_MAX}
               />
             </div>
-            <div className="trade-actions">
-              <button className="cta-yes full" onClick={() => trade("YES")}>Buy YES</button>
-              <button className="cta-no full" onClick={() => trade("NO")}>Buy NO</button>
-            </div>
           </SignedIn>
           <SignedOut>
             <div className="muted">Sign in to trade</div>
             <SignInButton />
           </SignedOut>
           {err ? <p style={{ color: "salmon" }}>{err}</p> : null}
+          <SignedIn>
+            <div className="trade-actions" style={{ marginTop: 16 }}>
+              <button className="cta-yes full" onClick={() => trade("YES")}>Buy YES</button>
+              <button className="cta-no full" onClick={() => trade("NO")}>Buy NO</button>
+            </div>
+          </SignedIn>
         </div>
       </div>
 
-      {/* Past trades panel intentionally removed */}
+      <div style={{ height: 32 }} />
+
+      {others.length > 0 ? (
+        <div className="card fancy-card">
+          <h3 style={{ marginTop: 0, fontSize: "1.2rem", fontWeight: 780 }}>Other markets</h3>
+          <div className="market-grid">
+            {others.map((m) => {
+              const imageUrl = m.image || "/globe.svg";
+              return (
+                <div className="market-card" key={m.id}>
+                  <div
+                    className="market-image"
+                    style={{ backgroundImage: `url(${imageUrl})` }}
+                  />
+                  <div style={{ fontWeight: 750, fontSize: "1.12rem" }}>{m.question}</div>
+                  <div className="meta-line">
+                    <span>Volume: {(m.volume ?? 0).toFixed(3)} TC</span>
+                    <span>YES: {m.p_yes.toFixed(3)}</span>
+                  </div>
+                  <div className="market-actions">
+                    <a className="cta-yes" href={`/m/${m.id}`}>YES</a>
+                    <a className="cta-no" href={`/m/${m.id}`}>NO</a>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

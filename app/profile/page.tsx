@@ -132,7 +132,7 @@ export default function ProfilePage() {
           <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <div className="muted">Profit &amp; Loss</div>
-              <div style={{ fontSize: "1.9rem", color: pnlColor, fontWeight: 700 }}>
+              <div style={{ fontSize: "2.2rem", color: pnlColor, fontWeight: 780, letterSpacing: "-0.01em" }}>
                 {pnlTotal >= 0 ? "+" : ""}
                 {pnlTotal.toFixed(3)} TC
               </div>
@@ -157,10 +157,19 @@ export default function ProfilePage() {
 
         <div className="card fancy-card summary-card cash-card" style={{ flex: 1 }}>
           <div className="stat-label">Cash</div>
-          <div className="stat-value">{balance.toFixed(3)} TC</div>
-          <div className="stat-sub">Available Truth Coins.</div>
-          <div className="stat-sub" style={{ marginTop: 8 }}>Holdings value: {portfolioValue.toFixed(3)} TC</div>
-          <div className="stat-sub">Total: {(balance + portfolioValue).toFixed(3)} TC</div>
+          <div className="stat-value" style={{ fontSize: "2rem" }}>{balance.toFixed(3)} TC</div>
+          <div className="stat-sub">Available Truth Coins</div>
+          <div className="stat-divider" />
+          <div className="stat-row">
+            <div>
+              <div className="stat-label">Holdings value</div>
+              <div className="stat-value smaller">{portfolioValue.toFixed(3)} TC</div>
+            </div>
+            <div>
+              <div className="stat-label">Total</div>
+              <div className="stat-value smaller">{(balance + portfolioValue).toFixed(3)} TC</div>
+            </div>
+          </div>
         </div>
       </div>
 
