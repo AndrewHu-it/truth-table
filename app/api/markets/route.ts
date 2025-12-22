@@ -3,14 +3,21 @@ import { B_STATIC, yesPrice } from "@/lib/lmsr";
 
 export async function GET() {
   const r = await pool.query(
-    `SELECT id, question, b, q_yes, q_no, created_at, image
-     FROM markets
-     ORDER BY created_at DESC`
+    `SELECT m.id, m.question, m.b, m.q_yes, m.q_no, m.created_at, m.image,
+            COALESCE(v.volume, 0) AS volume
+     FROM markets m
+     LEFT JOIN (
+       SELECT market_id, SUM(cost) AS volume
+       FROM trades
+       GROUP BY market_id
+     ) v ON v.market_id = m.id
+     ORDER BY m.created_at DESC`
   );
 
   const markets = r.rows.map((m: any) => ({
     ...m,
     p_yes: yesPrice(m.q_yes, m.q_no, m.b),
+    volume: Number(m.volume ?? 0),
   }));
 
   return Response.json({ markets });

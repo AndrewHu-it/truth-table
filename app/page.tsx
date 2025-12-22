@@ -1,5 +1,6 @@
 "use client";
 
+import { SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 
 type Market = {
@@ -11,6 +12,7 @@ type Market = {
   p_yes: number;
   created_at: string;
   image?: string | null;
+  volume?: number;
 };
 
 export default function Page() {
@@ -18,6 +20,11 @@ export default function Page() {
   const [question, setQuestion] = useState("");
   const [image, setImage] = useState("");
   const [err, setErr] = useState("");
+  const [query, setQuery] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const url = new URL(window.location.href);
+    return url.searchParams.get("q") ?? "";
+  });
 
   async function load() {
     setErr("");
@@ -59,30 +66,41 @@ export default function Page() {
 
       <div className="card">
         <h3>Create a market</h3>
-        <div className="row">
-          <div style={{ flex: 1 }}>
-            <input
-              className="input"
-              placeholder="Question..."
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-            />
+        <SignedIn>
+          <div className="row">
+            <div style={{ flex: 1 }}>
+              <input
+                className="input"
+                placeholder="Question..."
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <input
+                className="input"
+                placeholder="Image URL (optional)"
+                value={image}
+                onChange={(e) => setImage(e.target.value)}
+              />
+            </div>
+            <button className="btn" onClick={createMarket}>Create</button>
           </div>
-          <div style={{ flex: 1 }}>
-            <input
-              className="input"
-              placeholder="Image URL (optional)"
-              value={image}
-              onChange={(e) => setImage(e.target.value)}
-            />
-          </div>
-          <button className="btn" onClick={createMarket}>Create</button>
-        </div>
-        {err ? <p style={{ color: "salmon" }}>{err}</p> : null}
+          {err ? <p style={{ color: "salmon" }}>{err}</p> : null}
+        </SignedIn>
+        <SignedOut>
+          <div className="muted">Sign in to create a market.</div>
+          <SignInButton />
+        </SignedOut>
       </div>
 
       <div className="market-grid">
-        {markets.map((m) => {
+        {markets
+          .filter((m) => {
+            if (!query.trim()) return true;
+            return m.question.toLowerCase().includes(query.toLowerCase());
+          })
+          .map((m) => {
           const imageUrl = m.image || "/globe.svg"; // replace with your own image URL per market
           return (
             <div className="market-card" key={m.id}>
@@ -93,7 +111,7 @@ export default function Page() {
               />
               <div style={{ fontWeight: 700, fontSize: "1.05rem" }}>{m.question}</div>
               <div className="meta-line">
-                <span>Liquidity b={m.b}</span>
+                <span>Volume: {(m.volume ?? 0).toFixed(3)} TC</span>
                 <span>YES: {m.p_yes.toFixed(3)}</span>
               </div>
               <div className="market-actions">

@@ -32,8 +32,8 @@ const ranges = ["ALL", "1M", "1W", "1D"] as const;
 
 function PnlGraph({ points }: { points: PnlPoint[] }) {
   const W = 640;
-  const H = 180;
-  const pad = 12;
+  const H = 200;
+  const pad = 16;
 
   if (!points || points.length === 0) {
     return <div className="muted">No PnL data yet.</div>;
@@ -52,16 +52,25 @@ function PnlGraph({ points }: { points: PnlPoint[] }) {
     .map((pt, i) => `${i === 0 ? "M" : "L"} ${xs[i].toFixed(2)} ${scaleY(pt.pnl).toFixed(2)}`)
     .join(" ");
 
+  const gradientId = "pnlGrad";
+
   return (
-    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block", borderRadius: 14, border: "1px solid rgba(80,140,255,0.25)" }}>
-      <rect x="0" y="0" width={W} height={H} fill="rgba(40, 80, 180, 0.06)" />
-      <line x1={pad} x2={W - pad} y1={scaleY(0)} y2={scaleY(0)} stroke="rgba(255,255,255,0.2)" strokeDasharray="4 4" />
-      <path d={d} fill="none" stroke="rgba(120, 170, 255, 0.95)" strokeWidth="2.5" />
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="pnl-graph">
+      <defs>
+        <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="rgba(120,170,255,0.35)" />
+          <stop offset="100%" stopColor="rgba(120,170,255,0.03)" />
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width={W} height={H} fill="rgba(255,255,255,0.9)" rx="16" />
+      <line x1={pad} x2={W - pad} y1={scaleY(0)} y2={scaleY(0)} stroke="rgba(15,26,47,0.18)" strokeDasharray="4 4" />
+      <path d={`${d} L ${xs[xs.length - 1]} ${H - pad} L ${xs[0]} ${H - pad} Z`} fill={`url(#${gradientId})`} />
+      <path d={d} fill="none" stroke="rgba(65,120,245,0.9)" strokeWidth="3" />
       {(() => {
         const last = points[points.length - 1];
         const cx = xs[xs.length - 1];
         const cy = scaleY(last.pnl);
-        return <circle cx={cx} cy={cy} r="4" fill="rgba(120, 170, 255, 0.95)" />;
+        return <circle cx={cx} cy={cy} r="5" fill="rgba(65,120,245,0.95)" stroke="#fff" strokeWidth="1.5" />;
       })()}
     </svg>
   );
@@ -112,45 +121,41 @@ export default function ProfilePage() {
   }, [range]);
 
   const pnlColor = pnlTotal >= 0 ? "#65d57d" : "#ef7070";
+  const tradesDisplay = trades.slice(0, 30);
 
   return (
-    <div className="container">
-      <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-        <h1 style={{ margin: 0 }}>Portfolio</h1>
-        <div className="row" style={{ gap: 8 }}>
-          {ranges.map((r) => (
-            <button
-              key={r}
-              className="btn"
-              style={{ background: r === range ? "rgba(120, 170, 255, 0.35)" : undefined }}
-              onClick={() => setRange(r)}
-            >
-              {r}
-            </button>
-          ))}
-        </div>
-      </div>
-
+    <div className="container portfolio-container">
       {err ? <p style={{ color: "salmon" }}>{err}</p> : null}
 
-      <div className="row" style={{ alignItems: "stretch" }}>
-        <div className="card" style={{ flex: 2 }}>
+      <div className="row" style={{ alignItems: "stretch", gap: 14 }}>
+        <div className="card fancy-card" style={{ flex: 2, position: "relative" }}>
           <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <div className="muted">Profit &amp; Loss</div>
-              <div style={{ fontSize: "1.8rem", color: pnlColor }}>
+              <div style={{ fontSize: "1.9rem", color: pnlColor, fontWeight: 700 }}>
                 {pnlTotal >= 0 ? "+" : ""}
                 {pnlTotal.toFixed(3)} TC
               </div>
             </div>
             {loading ? <div className="muted">Loading...</div> : null}
           </div>
-          <div style={{ marginTop: 12 }}>
+          <div className="graph-box">
+            <div className="range-tabs inline">
+              {ranges.map((r) => (
+                <button
+                  key={r}
+                  className={`tab-btn ${r === range ? "active" : ""}`}
+                  onClick={() => setRange(r)}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
             <PnlGraph points={points} />
           </div>
         </div>
 
-        <div className="card" style={{ flex: 1 }}>
+        <div className="card fancy-card" style={{ flex: 1 }}>
           <div className="muted">Cash</div>
           <div style={{ fontSize: "1.6rem", fontWeight: 650 }}>{balance.toFixed(3)} TC</div>
           <div className="muted" style={{ marginTop: 8 }}>Available Truth Coins.</div>
@@ -159,57 +164,67 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="card" id="positions">
-        <h3 style={{ marginTop: 0 }}>Positions</h3>
+      <div className="card fancy-card" id="positions">
+        <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+          <h3 style={{ marginTop: 0, marginBottom: 4 }}>Positions</h3>
+          <div className="muted">Live mark-to-market</div>
+        </div>
         {positions.length === 0 ? <div className="muted">No positions yet.</div> : null}
-        {positions.map((p) => {
-          const color = p.pnl >= 0 ? "#65d57d" : "#ef7070";
-          return (
-            <div key={p.market_id} className="row" style={{ justifyContent: "space-between", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 8, marginTop: 8 }}>
-              <div>
-                <div style={{ fontWeight: 650 }}>{p.question}</div>
-                <div className="muted">
-                  YES: {p.shares_yes.toFixed(2)} • NO: {p.shares_no.toFixed(2)}
+        <div className="stacked-list">
+          {positions.map((p) => {
+            const color = p.pnl >= 0 ? "#1aa36f" : "#e35c5c";
+            return (
+              <div key={p.market_id} className="stacked-item">
+                <div>
+                  <div style={{ fontWeight: 650, marginBottom: 4 }}>{p.question}</div>
+                  <div className="muted">
+                    YES: {p.shares_yes.toFixed(2)} • NO: {p.shares_no.toFixed(2)}
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ color, fontWeight: 700 }}>
+                    {p.pnl >= 0 ? "+" : ""}
+                    {p.pnl.toFixed(3)} TC
+                    {" "}
+                    ({(p.pct * 100).toFixed(2)}%)
+                  </div>
+                  <div className="muted">Value: {p.value.toFixed(3)} TC</div>
                 </div>
               </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ color }}>
-                  {p.pnl >= 0 ? "+" : ""}
-                  {p.pnl.toFixed(3)} TC
-                  {" "}
-                  ({(p.pct * 100).toFixed(2)}%)
-                </div>
-                <div className="muted">Value: {p.value.toFixed(3)} TC</div>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
-      <div className="card">
-        <h3 style={{ marginTop: 0 }}>Trades</h3>
-        {trades.length === 0 ? <div className="muted">No trades yet.</div> : null}
-        {trades.map((t) => {
-          const color = t.pnl >= 0 ? "#65d57d" : "#ef7070";
-          return (
-            <div key={t.id} className="row" style={{ justifyContent: "space-between", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 8, marginTop: 8 }}>
-              <div>
-                <div style={{ fontWeight: 650 }}>{t.question}</div>
-                <div className="muted">{t.side} • {t.shares} shares @ price {t.price_now.toFixed(3)}</div>
-                <div className="muted">{new Date(t.created_at).toLocaleString()}</div>
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ color }}>
-                  {t.pnl >= 0 ? "+" : ""}
-                  {t.pnl.toFixed(3)} TC
-                  {" "}
-                  ({(t.pct * 100).toFixed(2)}%)
+      <div className="card fancy-card">
+        <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+          <h3 style={{ marginTop: 0, marginBottom: 4 }}>Last 30 trades</h3>
+          <div className="muted">Most recent activity</div>
+        </div>
+        {tradesDisplay.length === 0 ? <div className="muted">No trades yet.</div> : null}
+        <div className="stacked-list">
+          {tradesDisplay.map((t) => {
+            const color = t.pnl >= 0 ? "#1aa36f" : "#e35c5c";
+            return (
+              <div key={t.id} className="stacked-item">
+                <div>
+                  <div style={{ fontWeight: 650, marginBottom: 4 }}>{t.question}</div>
+                  <div className="muted">{t.side} • {t.shares} shares @ {t.price_now.toFixed(3)}</div>
+                  <div className="muted">{new Date(t.created_at).toLocaleString()}</div>
                 </div>
-                <div className="muted">Cost: {t.cost.toFixed(3)} TC</div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ color, fontWeight: 700 }}>
+                    {t.pnl >= 0 ? "+" : ""}
+                    {t.pnl.toFixed(3)} TC
+                    {" "}
+                    ({(t.pct * 100).toFixed(2)}%)
+                  </div>
+                  <div className="muted">Cost: {t.cost.toFixed(3)} TC</div>
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );

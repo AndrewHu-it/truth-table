@@ -10,6 +10,7 @@ export default function TopNav() {
   const { isSignedIn } = useUser();
   const [cash, setCash] = useState(0);
   const [portfolio, setPortfolio] = useState(0);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -20,6 +21,12 @@ export default function TopNav() {
     document.addEventListener("click", onClick);
     return () => document.removeEventListener("click", onClick);
   }, []);
+
+  function onSearchSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!query.trim()) return;
+    window.location.href = `/?q=${encodeURIComponent(query.trim())}`;
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -54,8 +61,21 @@ export default function TopNav() {
 
   return (
     <header className="topnav">
-      <div className="brand">
-        <Link href="/">Truth Table</Link>
+      <div className="nav-left">
+        <Link href="/" className="logo-link">
+          TRUTH TABLE
+        </Link>
+      </div>
+      <div className="nav-center">
+        <form onSubmit={onSearchSubmit} className="search">
+          <input
+            className="input"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search markets..."
+          />
+          <button className="btn" type="submit">Search</button>
+        </form>
       </div>
       <div className="nav-actions">
         <Link href="/" className="nav-link">Markets</Link>
