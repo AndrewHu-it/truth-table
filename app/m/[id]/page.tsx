@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react"; // ⚠️ CHANGED: `use` unwraps params Promise
+import { use, useEffect, useMemo, useState } from "react"; // ⚠️ CHANGED: `use` unwraps params Promise
 import { SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
 import { SHARES_MAX } from "@/lib/lmsr";
 
@@ -12,6 +12,8 @@ type Market = {
   q_no: number;
   p_yes: number;
   created_at: string;
+  image?: string | null;
+  volume?: number;
 };
 
 type Trade = {
@@ -25,51 +27,58 @@ type Trade = {
 
 type Point = { t: string; p_yes: number }; // ⚠️ CHANGED: history points for graph
 
-function PriceGraph({ points }: { points: { p_yes: number }[] }) {
-  const W = 640;
-  const H = 180;
-  const pad = 12;
+function PriceGraph({ points }: { points: { p_yes: number; t: string }[] }) {
+  const W = 720;
+  const H = 240;
+  const pad = 20;
 
   if (!points || points.length < 2) {
     return <div className="muted">Not enough data yet to plot a graph.</div>;
   }
 
-  const xFor = (i: number) => pad + (i * (W - 2 * pad)) / (points.length - 1);
-  const yFor = (p: number) => pad + (1 - p) * (H - 2 * pad);
+  const xs = points.map((_, i) => pad + (i * (W - 2 * pad)) / Math.max(points.length - 1, 1));
+  const ys = points.map((p) => p.p_yes);
+  const min = Math.min(...ys, 0);
+  const max = Math.max(...ys, 1);
+  const yFor = (p: number) => pad + (1 - (p - min) / (max - min || 1)) * (H - 2 * pad);
 
   const d = points
-    .map((pt, i) => `${i === 0 ? "M" : "L"} ${xFor(i).toFixed(2)} ${yFor(pt.p_yes).toFixed(2)}`)
+    .map((pt, i) => `${i === 0 ? "M" : "L"} ${xs[i].toFixed(2)} ${yFor(pt.p_yes).toFixed(2)}`)
     .join(" ");
 
+  const gradientId = "marketGrad";
+
   return (
-    <svg
-      width="100%"
-      viewBox={`0 0 ${W} ${H}`}
-      style={{ display: "block", borderRadius: 14, border: "1px solid rgba(80,140,255,0.25)" }}
-    >
-      <rect x="0" y="0" width={W} height={H} fill="rgba(40, 80, 180, 0.06)" />
-
-      {[0.25, 0.5, 0.75].map((p) => {
-        const y = yFor(p);
-        return (
-          <g key={p}>
-            <line x1={pad} x2={W - pad} y1={y} y2={y} stroke="rgba(255,255,255,0.12)" strokeWidth="1" />
-            <text x={W - pad} y={y - 4} fontSize="10" fill="rgba(255,255,255,0.45)" textAnchor="end">
-              {p.toFixed(2)}
-            </text>
-          </g>
-        );
-      })}
-
-      <path d={d} fill="none" stroke="rgba(120, 170, 255, 0.95)" strokeWidth="2.5" />
-
-      {(() => {
-        const last = points[points.length - 1].p_yes;
-        const cx = xFor(points.length - 1);
-        const cy = yFor(last);
-        return <circle cx={cx} cy={cy} r="4" fill="rgba(120, 170, 255, 0.95)" />;
-      })()}
-    </svg>
+    <div className="graph-shell">
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="pnl-graph">
+        <defs>
+          <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="rgba(90, 140, 255, 0.35)" />
+            <stop offset="100%" stopColor="rgba(90, 140, 255, 0.05)" />
+          </linearGradient>
+        </defs>
+        <rect x="0" y="0" width={W} height={H} fill="rgba(255,255,255,0.95)" rx="16" />
+        {[0.25, 0.5, 0.75].map((p) => {
+          const y = yFor(p);
+          return (
+            <g key={p}>
+              <line x1={pad} x2={W - pad} y1={y} y2={y} stroke="rgba(15,26,47,0.12)" strokeWidth="1" />
+              <text x={W - 6} y={y - 4} fontSize="10" fill="rgba(15,26,47,0.55)" textAnchor="end">
+                {(p * 100).toFixed(0)}%
+              </text>
+            </g>
+          );
+        })}
+        <path d={`${d} L ${xs[xs.length - 1]} ${H - pad} L ${xs[0]} ${H - pad} Z`} fill={`url(#${gradientId})`} />
+        <path d={d} fill="none" stroke="rgba(65,120,245,0.95)" strokeWidth="3" />
+        {(() => {
+          const last = points[points.length - 1].p_yes;
+          const cx = xs[xs.length - 1];
+          const cy = yFor(last);
+          return <circle cx={cx} cy={cy} r="5" fill="rgba(65,120,245,0.95)" stroke="#fff" strokeWidth="1.5" />;
+        })()}
+      </svg>
+    </div>
   );
 }
 
@@ -81,6 +90,7 @@ export default function MarketPage({ params }: { params: Promise<{ id: string }>
   const [points, setPoints] = useState<Point[]>([]); // ⚠️ CHANGED
   const [shares, setShares] = useState(5);
   const [err, setErr] = useState("");
+  const [range, setRange] = useState<"ALL" | "1H" | "6H" | "1D" | "1W" | "1M">("ALL");
 
   async function loadAll() {
     setErr("");
@@ -96,11 +106,15 @@ export default function MarketPage({ params }: { params: Promise<{ id: string }>
     const tRes = await fetch(`/api/markets/${id}/trades`, { cache: "no-store" });
     if (tRes.ok) {
       const tData = await tRes.json();
-      setTrades(tData.trades ?? []);
+      const clean = (tData.trades ?? []).map((t: any) => ({
+        ...t,
+        shares: Number(t.shares ?? 0),
+        cost: Number(t.cost ?? 0),
+      }));
+      setTrades(clean);
     }
 
-    // ⚠️ CHANGED: history for graph
-    const hRes = await fetch(`/api/markets/${id}/history?limit=300`, { cache: "no-store" });
+    const hRes = await fetch(`/api/markets/${id}/history?limit=600&range=${range}`, { cache: "no-store" });
     if (hRes.ok) {
       const hData = await hRes.json();
       setPoints(hData.points ?? []);
@@ -111,7 +125,8 @@ export default function MarketPage({ params }: { params: Promise<{ id: string }>
     loadAll();
     const timer = setInterval(loadAll, 5000);
     return () => clearInterval(timer);
-  }, [id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, range]);
 
   async function trade(side: "YES" | "NO") {
     setErr("");
@@ -140,23 +155,64 @@ export default function MarketPage({ params }: { params: Promise<{ id: string }>
     await loadAll();
   }
 
+  const priceDisplay = useMemo(() => {
+    if (!market) return "…";
+    return `${(market.p_yes * 100).toFixed(1)}% chance`;
+  }, [market]);
+
   return (
-    <div className="container">
+    <div className="container market-layout">
       <a className="muted" href="/">← Back</a>
 
-      <div className="card">
-        <h2 style={{ marginTop: 0 }}>{market ? market.question : "Loading..."}</h2>
-
-        {market ? (
-          <div className="muted">
-            YES price: <b>{market.p_yes.toFixed(4)}</b> • q_yes={market.q_yes.toFixed(2)} • q_no={market.q_no.toFixed(2)}
+      <div className="market-grid-main">
+        <div className="card fancy-card market-main">
+          <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+            <div className="row" style={{ alignItems: "center", gap: 12 }}>
+              {market?.image ? (
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 12,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    backgroundImage: `url(${market.image})`,
+                    border: "1px solid rgba(15,26,47,0.08)",
+                  }}
+                />
+              ) : null}
+              <div>
+                <div style={{ fontSize: "1.6rem", fontWeight: 780 }}>{market ? market.question : "Loading..."}</div>
+                <div className="muted">Volume: {(market?.volume ?? 0).toFixed(3)} TC</div>
+              </div>
+            </div>
+            <div style={{ fontSize: "1.4rem", fontWeight: 750 }}>{priceDisplay}</div>
           </div>
-        ) : null}
 
-        <div className="row" style={{ marginTop: 12 }}>
+          <div className="graph-box">
+            <div className="range-tabs inline" style={{ marginBottom: 4 }}>
+              {(["ALL", "1H", "6H", "1D", "1W", "1M"] as const).map((r) => (
+                <button
+                  key={r}
+                  className={`tab-btn ${r === range ? "active" : ""}`}
+                  onClick={() => setRange(r)}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+            <PriceGraph points={points} />
+          </div>
+        </div>
+
+        <div className="card trade-box">
+          <h3 style={{ marginTop: 0, marginBottom: 6, fontSize: "1.1rem", fontWeight: 750 }}>Place Order</h3>
+          <div style={{ marginBottom: 10, fontSize: "1.2rem", fontWeight: 700 }}>{priceDisplay}</div>
           <SignedIn>
-            <div style={{ width: 160 }}>
+            <div className="trade-input">
+              <label className="muted" htmlFor="shares">Shares</label>
               <input
+                id="shares"
                 className="input"
                 type="number"
                 value={shares}
@@ -164,48 +220,21 @@ export default function MarketPage({ params }: { params: Promise<{ id: string }>
                 min={0.0001}
                 max={SHARES_MAX}
               />
-              <div className="muted">shares</div>
             </div>
-
-            <button className="btn" onClick={() => trade("YES")}>Buy YES</button>
-            <button className="btn" onClick={() => trade("NO")}>Buy NO</button>
+            <div className="trade-actions">
+              <button className="cta-yes full" onClick={() => trade("YES")}>Buy YES</button>
+              <button className="cta-no full" onClick={() => trade("NO")}>Buy NO</button>
+            </div>
           </SignedIn>
           <SignedOut>
             <div className="muted">Sign in to trade</div>
             <SignInButton />
           </SignedOut>
+          {err ? <p style={{ color: "salmon" }}>{err}</p> : null}
         </div>
-
-        {err ? <p style={{ color: "salmon" }}>{err}</p> : null}
       </div>
 
-      <div className="card">
-        <h3>YES price over time</h3>
-        <PriceGraph points={points} />
-      </div>
-
-      <div className="card">
-        <h3>Recent trades</h3>
-        {trades.length === 0 ? <div className="muted">No trades yet.</div> : null}
-
-        {trades.map((t) => (
-          <div
-            key={t.id}
-            className="row"
-            style={{
-              justifyContent: "space-between",
-              borderTop: "1px solid rgba(255,255,255,0.08)",
-              paddingTop: 8,
-              marginTop: 8,
-            }}
-          >
-            <div>
-              <b>{t.side}</b> {t.shares} shares <span className="muted">by {t.who}</span>
-            </div>
-            <div className="muted">cost: {Number(t.cost).toFixed(4)}</div>
-          </div>
-        ))}
-      </div>
+      {/* Past trades panel intentionally removed */}
     </div>
   );
 }

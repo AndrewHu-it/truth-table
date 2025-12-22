@@ -15,7 +15,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), "Inter", system-ui, -apple-system, sans-serif;
   min-height: 100vh;
   background: radial-gradient(circle at 20% 20%, rgba(120, 160, 255, 0.15), transparent 28%),
               radial-gradient(circle at 80% 0%, rgba(255, 200, 140, 0.18), transparent 30%),
@@ -24,7 +24,7 @@ body {
 
 /* ⚠️ CHANGED: simple reusable styles */
 .container {
-  max-width: 980px;
+  max-width: 1180px;
   margin: 0 auto;
   padding: 24px;
 }
@@ -239,11 +239,15 @@ body {
 }
 
 .cta-yes {
-  background: linear-gradient(120deg, #d7f7e1, #bdf2cc);
+  background: linear-gradient(120deg, #5ed49f, #3ecf8e);
+  color: #0a1a20;
+  box-shadow: 0 10px 24px rgba(62, 207, 142, 0.35);
 }
 
 .cta-no {
-  background: linear-gradient(120deg, #ffe2e2, #ffc9c9);
+  background: linear-gradient(120deg, #ff8c8c, #ff6262);
+  color: #1d0a0a;
+  box-shadow: 0 10px 24px rgba(255, 98, 98, 0.35);
 }
 
 .meta-line {
@@ -254,7 +258,7 @@ body {
 }
 
 .portfolio-container h1 {
-  font-family: "Inter", var(--font-geist-sans), sans-serif;
+  font-family: var(--font-geist-sans), "Inter", sans-serif;
 }
 
 .fancy-card {
@@ -330,6 +334,75 @@ body {
   justify-content: space-between;
   gap: 12px;
   box-shadow: 0 10px 28px rgba(35, 70, 150, 0.06);
+}
+
+.summary-card {
+  border: none;
+  color: #0f1a2f;
+  background: linear-gradient(150deg, #ffffff 0%, #eef3ff 100%);
+  box-shadow: 0 16px 46px rgba(35, 70, 150, 0.08);
+}
+
+.cash-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stat-label {
+  font-size: 0.95rem;
+  color: rgba(15, 26, 47, 0.7);
+}
+
+.stat-value {
+  font-size: 1.8rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+.stat-sub {
+  font-size: 0.98rem;
+  color: rgba(15, 26, 47, 0.75);
+}
+
+.market-layout .market-grid-main {
+  display: grid;
+  grid-template-columns: 2.6fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.market-main {
+  background: linear-gradient(145deg, #ffffff, #f5f8ff);
+}
+
+.market-grid-main .trade-box {
+  position: sticky;
+  top: 80px;
+  box-shadow: 0 14px 42px rgba(15, 26, 47, 0.08);
+  border: 1px solid rgba(15, 26, 47, 0.08);
+  border-radius: 16px;
+  background: #fdfdff;
+}
+
+.trade-box .full {
+  text-align: center;
+  flex: 1;
+}
+
+.graph-shell {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.trade-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.trade-actions .cta-yes,
+.trade-actions .cta-no {
+  flex: 1;
 }
 
 .topnav {

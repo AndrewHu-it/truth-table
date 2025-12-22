@@ -155,12 +155,12 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <div className="card fancy-card" style={{ flex: 1 }}>
-          <div className="muted">Cash</div>
-          <div style={{ fontSize: "1.6rem", fontWeight: 650 }}>{balance.toFixed(3)} TC</div>
-          <div className="muted" style={{ marginTop: 8 }}>Available Truth Coins.</div>
-          <div className="muted" style={{ marginTop: 12 }}>Holdings value: {portfolioValue.toFixed(3)} TC</div>
-          <div className="muted" style={{ marginTop: 4 }}>Total: {(balance + portfolioValue).toFixed(3)} TC</div>
+        <div className="card fancy-card summary-card cash-card" style={{ flex: 1 }}>
+          <div className="stat-label">Cash</div>
+          <div className="stat-value">{balance.toFixed(3)} TC</div>
+          <div className="stat-sub">Available Truth Coins.</div>
+          <div className="stat-sub" style={{ marginTop: 8 }}>Holdings value: {portfolioValue.toFixed(3)} TC</div>
+          <div className="stat-sub">Total: {(balance + portfolioValue).toFixed(3)} TC</div>
         </div>
       </div>
 

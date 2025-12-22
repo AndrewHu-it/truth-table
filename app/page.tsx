@@ -57,13 +57,6 @@ export default function Page() {
 
   return (
     <div className="container">
-      <div className="hero">
-        <h1 style={{ marginBottom: 6 }}>Truth Table</h1>
-        <p className="muted" style={{ margin: 0 }}>
-          Browse markets, tap YES or NO to jump in. Prices update live.
-        </p>
-      </div>
-
       <div className="card">
         <h3>Create a market</h3>
         <SignedIn>
