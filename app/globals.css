@@ -193,6 +193,41 @@ body {
   color: #0f1a2f;
 }
 
+.auth-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.auth-btn {
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(15, 26, 47, 0.12);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.auth-btn.primary {
+  background: linear-gradient(120deg, #5ed49f, #3ecf8e);
+  color: #0a1a0e;
+  border: 1px solid rgba(62, 207, 142, 0.4);
+  box-shadow: 0 10px 24px rgba(62, 207, 142, 0.28);
+}
+
+.auth-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(15, 26, 47, 0.08);
+}
+
+.signedout-panel {
+  padding: 10px 12px;
+  border: 1px dashed rgba(15, 26, 47, 0.16);
+  border-radius: 14px;
+  background: rgba(255,255,255,0.75);
+}
+
 .search {
   display: flex;
   gap: 8px;

@@ -84,8 +84,14 @@ export default function TopNav() {
           <div className="pill pill-strong">Balance: {(portfolio + cash).toFixed(3)} TC</div>
         </SignedIn>
         <SignedOut>
-          <SignInButton />
-          <SignUpButton />
+          <div className="auth-buttons">
+            <SignInButton>
+              <button className="pill auth-btn primary">Sign in</button>
+            </SignInButton>
+            <SignUpButton>
+              <button className="pill auth-btn">Sign up</button>
+            </SignUpButton>
+          </div>
         </SignedOut>
         <SignedIn>
           <UserButton />

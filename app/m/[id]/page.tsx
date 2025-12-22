@@ -26,6 +26,7 @@ type Trade = {
 };
 
 type Point = { t: string; p_yes: number }; // ⚠️ CHANGED: history points for graph
+type Holdings = { yes: number; no: number };
 
 function PriceGraph({ points }: { points: { p_yes: number; t: string }[] }) {
   const W = 780;
@@ -92,6 +93,8 @@ export default function MarketPage({ params }: { params: Promise<{ id: string }>
   const [err, setErr] = useState("");
   const [range, setRange] = useState<"ALL" | "1H" | "6H" | "1D" | "1W" | "1M">("ALL");
   const [others, setOthers] = useState<Market[]>([]);
+  const [mode, setMode] = useState<"BUY" | "SELL">("BUY");
+  const [holdings, setHoldings] = useState<Holdings>({ yes: 0, no: 0 });
 
   async function loadAll() {
     setErr("");
@@ -121,6 +124,9 @@ export default function MarketPage({ params }: { params: Promise<{ id: string }>
         cost: Number(t.cost ?? 0),
       }));
       setTrades(clean);
+      const yesHeld = clean.filter((t: any) => t.side === "YES").reduce((sum, t) => sum + t.shares, 0);
+      const noHeld  = clean.filter((t: any) => t.side === "NO").reduce((sum, t) => sum + t.shares, 0);
+      setHoldings({ yes: yesHeld, no: noHeld });
     }
 
     const hRes = await fetch(`/api/markets/${id}/history?limit=600&range=${range}`, { cache: "no-store" });
@@ -148,7 +154,7 @@ export default function MarketPage({ params }: { params: Promise<{ id: string }>
     const r = await fetch(`/api/markets/${id}/trade`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ side, shares }),
+      body: JSON.stringify({ side, shares, action: mode }),
     });
 
     const data = await r.json();
@@ -215,6 +221,20 @@ export default function MarketPage({ params }: { params: Promise<{ id: string }>
         <div className="card trade-box" style={{ padding: 16 }}>
           <h3 style={{ marginTop: 0, marginBottom: 6, fontSize: "1.1rem", fontWeight: 750 }}>Place Order</h3>
           <div style={{ marginBottom: 12, fontSize: "1.3rem", fontWeight: 750 }}>{priceDisplay}</div>
+          <div className="range-tabs inline" style={{ marginBottom: 10, justifyContent: "flex-start" }}>
+            {(["BUY", "SELL"] as const).map((m) => (
+              <button
+                key={m}
+                className={`tab-btn ${mode === m ? "active" : ""}`}
+                onClick={() => setMode(m)}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+          <div className="muted" style={{ marginBottom: 8 }}>
+            Your holdings — YES: {holdings.yes.toFixed(2)} • NO: {holdings.no.toFixed(2)}
+          </div>
           <SignedIn>
             <div className="trade-input">
               <label className="muted" htmlFor="shares" style={{ fontSize: "0.95rem" }}>Shares</label>
@@ -236,8 +256,8 @@ export default function MarketPage({ params }: { params: Promise<{ id: string }>
           {err ? <p style={{ color: "salmon" }}>{err}</p> : null}
           <SignedIn>
             <div className="trade-actions" style={{ marginTop: 16 }}>
-              <button className="cta-yes full" onClick={() => trade("YES")}>Buy YES</button>
-              <button className="cta-no full" onClick={() => trade("NO")}>Buy NO</button>
+              <button className="cta-yes full" onClick={() => trade("YES")}>YES</button>
+              <button className="cta-no full" onClick={() => trade("NO")}>NO</button>
             </div>
           </SignedIn>
         </div>

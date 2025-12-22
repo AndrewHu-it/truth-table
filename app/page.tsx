@@ -1,6 +1,6 @@
 "use client";
 
-import { SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, SignInButton, SignUpButton } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 
 type Market = {
@@ -58,7 +58,6 @@ export default function Page() {
   return (
     <div className="container">
       <div className="card">
-        <h3>Create a market</h3>
         <SignedIn>
           <div className="row">
             <div style={{ flex: 1 }}>
@@ -82,8 +81,20 @@ export default function Page() {
           {err ? <p style={{ color: "salmon" }}>{err}</p> : null}
         </SignedIn>
         <SignedOut>
-          <div className="muted">Sign in to create a market.</div>
-          <SignInButton />
+          <div className="signedout-panel">
+            <div style={{ fontSize: "1.1rem", fontWeight: 700 }}>Sign in to create a market</div>
+            <div className="muted" style={{ margin: "6px 0 12px" }}>
+              Join to launch a new market and start trading.
+            </div>
+            <div className="auth-buttons">
+              <SignInButton>
+                <button className="pill auth-btn primary">Sign in</button>
+              </SignInButton>
+              <SignUpButton>
+                <button className="pill auth-btn">Sign up</button>
+              </SignUpButton>
+            </div>
+          </div>
         </SignedOut>
       </div>
 

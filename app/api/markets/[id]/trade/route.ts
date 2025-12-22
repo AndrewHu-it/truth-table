@@ -16,10 +16,14 @@ export async function POST(
   const body = await req.json().catch(() => ({}));
   const side = String(body.side ?? "").toUpperCase();
   const shares = Number(body.shares ?? 0);
+  const action = String(body.action ?? "BUY").toUpperCase() as "BUY" | "SELL";
   const who = userId;
 
   if (side !== "YES" && side !== "NO") {
     return Response.json({ error: "side must be YES or NO" }, { status: 400 });
+  }
+  if (action !== "BUY" && action !== "SELL") {
+    return Response.json({ error: "action must be BUY or SELL" }, { status: 400 });
   }
   if (!Number.isFinite(shares) || shares <= 0 || shares > SHARES_MAX) {
     return Response.json({ error: `shares must be > 0 and <= ${SHARES_MAX}` }, { status: 400 });
@@ -77,21 +81,49 @@ export async function POST(
     const qYesOld = Number(m.q_yes);
     const qNoOld = Number(m.q_no);
 
+    // holdings check for sells
+    const hRes = await client.query(
+      `SELECT
+         COALESCE(SUM(CASE WHEN side = 'YES' THEN shares ELSE 0 END), 0) AS yes,
+         COALESCE(SUM(CASE WHEN side = 'NO'  THEN shares ELSE 0 END), 0) AS no
+       FROM trades
+       WHERE market_id = $1 AND who = $2`,
+      [marketId, userId]
+    );
+    const holdYes = Number(hRes.rows[0].yes);
+    const holdNo  = Number(hRes.rows[0].no);
+
+    if (action === "SELL") {
+      if (side === "YES" && holdYes < shares - 1e-9) {
+        await client.query("ROLLBACK");
+        return Response.json({ error: "not enough YES shares to sell" }, { status: 400 });
+      }
+      if (side === "NO" && holdNo < shares - 1e-9) {
+        await client.query("ROLLBACK");
+        return Response.json({ error: "not enough NO shares to sell" }, { status: 400 });
+      }
+    }
+
     const oldC = lmsrCost(qYesOld, qNoOld, b);
 
-    const qYesNew = side === "YES" ? qYesOld + shares : qYesOld;
-    const qNoNew  = side === "NO"  ? qNoOld + shares  : qNoOld;
+    const qYesNew = side === "YES"
+      ? qYesOld + (action === "BUY" ? shares : -shares)
+      : qYesOld;
+    const qNoNew  = side === "NO"
+      ? qNoOld + (action === "BUY" ? shares : -shares)
+      : qNoOld;
 
-    if (Math.abs(qYesNew) > Q_MAX || Math.abs(qNoNew) > Q_MAX) {
+    if (qYesNew < 0 || qNoNew < 0 || Math.abs(qYesNew) > Q_MAX || Math.abs(qNoNew) > Q_MAX) {
       await client.query("ROLLBACK");
       return Response.json({ error: "position size too large" }, { status: 400 });
     }
 
     const newC = lmsrCost(qYesNew, qNoNew, b);
     const rawCost = newC - oldC;
-    const cost = Math.max(rawCost, 0); // guard tiny negative due to floating error
+    const tradeCost = action === "BUY" ? Math.max(rawCost, 0) : Math.max(oldC - newC, 0);
+    const costRounded = Number(tradeCost.toFixed(6)); // keep precision sane for ledger/storage
 
-    if (cost > balance + 1e-9) {
+    if (action === "BUY" && costRounded > balance + 1e-9) {
       await client.query("ROLLBACK");
       return Response.json({ error: "insufficient balance" }, { status: 400 });
     }
@@ -103,7 +135,13 @@ export async function POST(
       `INSERT INTO trades (market_id, who, side, shares, cost)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id, created_at`,
-      [marketId, who, side, shares, cost]
+      [
+        marketId,
+        who,
+        side,
+        action === "SELL" ? -shares : shares,
+        action === "SELL" ? -costRounded : costRounded,
+      ]
     );
 
     // update live market snapshot
@@ -125,10 +163,12 @@ export async function POST(
     await client.query(
       `INSERT INTO ledger (user_id, delta, reason)
        VALUES ($1, $2, $3)`,
-      [userId, -cost, "trade_cost"]
+      [userId, action === "SELL" ? costRounded : -costRounded, "trade_cost"]
     );
 
     await client.query("COMMIT");
+
+    const responseCost = action === "SELL" ? -costRounded : costRounded;
 
     return Response.json({
       trade: {
@@ -137,7 +177,7 @@ export async function POST(
         who,
         side,
         shares,
-        cost,
+        cost: responseCost,
       },
       market: {
         id: marketId,
